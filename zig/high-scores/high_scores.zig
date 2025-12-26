@@ -1,26 +1,40 @@
 const std = @import("std");
 pub const HighScores = struct {
-    buffer: []const i32,
+    top_3: [3]i32,
+    last: ?i32,
 
     pub fn init(scores: []const i32) HighScores {
-        return HighScores{ .buffer = scores };
+        var result = HighScores{
+            .top_3 = @splat(-1),
+            .last = if (scores.len > 0) scores[scores.len - 1] else null,
+        };
+        for (scores) |score| {
+            if (result.top_3[0] < score) {
+                result.top_3[2] = result.top_3[1];
+                result.top_3[1] = result.top_3[0];
+                result.top_3[0] = score;
+            } else if (result.top_3[1] < score) {
+                result.top_3[2] = result.top_3[1];
+                result.top_3[1] = score;
+            } else if (result.top_3[2] < score) {
+                result.top_3[2] = score;
+            }
+        }
+        return result;
     }
 
     pub fn latest(self: *const HighScores) ?i32 {
-        if (self.buffer.len == 0)
-            return null;
-        return self.buffer[self.buffer.len - 1];
+        return self.last;
     }
 
     pub fn personalBest(self: *const HighScores) ?i32 {
-        const best_three = self.personalTopThree();
-        if (best_three.len == 0)
-            return null;
-        return best_three[0];
+        return if (self.top_3[0] >= 0) self.top_3[0] else null;
     }
 
     pub fn personalTopThree(self: *const HighScores) []const i32 {
-        var best: []i32 = .{0} ** 3;
-        return self.buffer;
+        const size = for (self.top_3, 1..) |v, i| {
+            if (v < 0) break i - 1;
+        } else 3;
+        return self.top_3[0..size];
     }
 };
